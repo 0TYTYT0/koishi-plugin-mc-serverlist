@@ -1,20 +1,16 @@
 import { Context } from "koishi";
 import { Config } from '../index';
-import mc from "@ahdg/minecraftstatuspinger";
-import { autoToHTML as motdParser } from '@sfirew/minecraft-motd-parser'
 import { } from 'koishi-plugin-puppeteer'
-import { motdJsonType } from "@sfirew/minecraft-motd-parser/types/types";
-import { } from 'koishi-plugin-umami-statistics-service'
 import url from 'node:url';
 import { Logger } from 'koishi';
 
-const logger = new Logger('mc-server-status');
+const logger = new Logger('mc-server');
 interface Status {
-  description: { translate: motdJsonType };
-  players: { max: number; online: number ;sample: { name: string; id: string }[] };
-  version: { name: string; protocol: number };
-  favicon: string;
-  modinfo: string;
+  motd: { html: string };
+  players: { max: number; online: number ;list: { name: string; id: string }[] };
+  version: string;
+  icon: string;
+  mods: { name: string; version: string };
 }
 
 const dark = ["#2e3440", "#cdd6f4", "#434c5e"];
@@ -76,53 +72,56 @@ export async function mcs(ctx: Context, config: Config) {
       
       server = server || (await ctx.database.get('mc_server_status', session.guildId))[0]?.server_ip || config.IP;
       const originalServer = server
-      let mcPort = 25565
-      if (server.includes(":")) {
-        let [host, port] = server.split(":");
-        server = convertToPunycode(host);
-        mcPort = parseInt(port)
-      } else {
-        server = convertToPunycode(server);
-      }
-      let mcdata: any
+      
+      let serverAddress = server;
+      let mcdata: any;
       try {
-        mc.setDnsServers([config.dnsServer])
-        mcdata = await mc.lookup({
-          host: server,
-          port: mcPort,
-          disableSRV: config.skipSRV,
-        })
-      } catch (e) {
-        return `出现错误: ${e.message}`
-      }
-      const status: Status = mcdata.status as any;
-      try {
-       // 输出调试信息
-        const { favicon, modinfo, ...debugData } = status;
+        // 使用 mcsrvstat.us API 替代
+        const apiUrl = `https://api.mcsrvstat.us/3/${encodeURIComponent(serverAddress)}`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; MinecraftServerStatus/1.0)'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API 请求失败: ${response.status}`);
+        }
+        mcdata = await response.json();
+        
+        try {
+         // 输出调试信息
+        const { icon, mods, ...debugData } = mcdata;
         logger.info('原始数据:', JSON.stringify(debugData, null, 2));
-      } catch (e) {
+        } catch (e) {
         logger.info('调试信息时出错:', e);
-      }
+        }
+      const status: Status = mcdata as any;
+      
+      // 处理并生成 HTML 内容
       let result = '';
       if (config.motd) {
-        const motd = motdParser(status.description.translate)
-        result += `<p>${motd}</p>`;
+        result += `<p>${status.motd.html}</p>`;
       }
-      result += `<p>IP: ${originalServer} - 延迟 ${mcdata.latency}ms</p>`;
-      result += `<p>版本: ${status.version.name} - ${status.version.protocol}</p>`;
+      result += `<p>IP: ${originalServer} </p>`;
+      result += `<p>版本: ${status.version}</p>`;
       result += `<p>在线人数: ${status.players.online}/${status.players.max}</p>`;
 
-      if (status.players.sample && status.players.sample.length > 0) {
+      if (status.players.list && status.players.list.length > 0) {
       // 提取玩家名称
-        const playerNames = status.players.sample.map(player => player.name).join(', ');
+        const playerNames = status.players.list.map(player => player.name).join(', ');
        result += `<p>在线玩家: ${playerNames}</p>`;
       } else {
        result += `<p>在线玩家: 无法获取</p>`;
       }
-      const icon = status.favicon
+      const icon = status.icon
       const footer = config.footer.replace(/\n/g, '</br>');
       const html = await generateHtml(icon, result, footer);
       const image = await ctx.puppeteer.render(html);
       return image;
+      } catch (e) {
+        logger.error('查询服务器状态失败:', e);
+        return '查询服务器状态失败';
+      }
     });
 }
