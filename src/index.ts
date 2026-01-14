@@ -1,7 +1,7 @@
 import { Context, Schema } from 'koishi'
 import { mcs } from './commands/mcs'
 
-export const name = 'mc-server-status'
+export const name = 'mc-server'
 
 export const inject = [
   'puppeteer'

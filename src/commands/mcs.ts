@@ -1,7 +1,6 @@
 import { Context } from "koishi";
 import { Config } from '../index';
 import { } from 'koishi-plugin-puppeteer'
-import url from 'node:url';
 import { Logger } from 'koishi';
 
 const logger = new Logger('mc-server');
