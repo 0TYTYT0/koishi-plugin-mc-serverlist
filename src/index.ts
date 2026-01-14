@@ -2,22 +2,36 @@ import { Context, Schema } from 'koishi'
 import { mcs } from './commands/mcs'
 
 export const name = 'mc-server'
-
 export const inject = [
   'puppeteer'
 ]
 
+export interface ServerItem {
+  name: string
+  ip: string
+}
+
 export interface Config {
-  IP: string
+  servers: ServerItem[]
   motd: boolean
   authority: number
   footer: string
 }
 
 export const Config: Schema<Config> = Schema.object({
-  IP: Schema.string()
-    .required(true)
-    .description('默认服务器IP'),
+  servers: Schema.array(
+    Schema.object({
+      name: Schema.string()
+        .required(true)
+        .description('服务器名称 (用于指令参数标识)'),
+      ip: Schema.string()
+        .required(true)
+        .description('服务器 IP 地址'),
+    })
+  )
+    .role('table')
+    .default([{ name: 'default', ip: 'localhost' }])
+    .description('服务器列表，支持多个服务器查询'),
   authority: Schema
     .number()
     .default(0)

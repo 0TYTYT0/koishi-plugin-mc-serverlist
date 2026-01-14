@@ -66,7 +66,7 @@ export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
     .action(async ({ }, server) => {
       
-      server = server || config.IP;
+      server = server || config.servers[0].ip;
       const originalServer = server
       
       let serverAddress = server;
