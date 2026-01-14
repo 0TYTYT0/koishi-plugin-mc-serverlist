@@ -4,8 +4,7 @@ import { mcs } from './commands/mcs'
 export const name = 'mc-server-status'
 
 export const inject = [
-  'puppeteer',
-  'database',
+  'puppeteer'
 ]
 
 export interface Config {
@@ -36,23 +35,6 @@ export const usage = `
 自用查询 Minecraft 服务器状态的插件。
 `
 
-declare module 'koishi' {
-  interface Tables {
-    mc_server_status: McServerStatus
-  }
-}
-
-export interface McServerStatus {
-  id: string
-  server_ip: string
-}
-
 export function apply(ctx: Context, config: Config) {
-  
-  const logger = ctx.logger('mc-server-status');
-  ctx.model.extend('mc_server_status', {
-    id: 'string',
-    server_ip: 'string'
-  }, {})
   mcs(ctx, config)
 }
