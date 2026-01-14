@@ -11,10 +11,8 @@ export const inject = [
 export interface Config {
   IP: string
   motd: boolean
-  skipSRV: boolean
   authority: number
   footer: string
-  dnsServer: string
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -25,12 +23,6 @@ export const Config: Schema<Config> = Schema.object({
     .number()
     .default(0)
     .description('默认指令权限等级 (mcs)'),
-  dnsServer: Schema.string()
-    .description('DNS 服务器')
-    .default('223.6.6.6'),
-  skipSRV: Schema.boolean()
-    .description('是否跳过 SRV 记录')
-    .default(false),
   motd: Schema.boolean()
     .default(true)
     .description('是否显示服务器 MOTD'),
