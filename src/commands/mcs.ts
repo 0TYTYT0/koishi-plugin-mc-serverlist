@@ -62,69 +62,96 @@ export async function bodyHtml(icon: string, text: string) {
   </div>`;
 }
 
+export async function getserverstatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
+  let originalName = serverName;
+  let originalServer = serverIP;
+  let mcdata: any;
+  try {
+    // 使用 mcsrvstat.us API 替代
+    const apiUrl = `https://api.mcsrvstat.us/3/${encodeURIComponent(serverIP)}`;
+    const response = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; MinecraftServerStatus/1.0)'
+     }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API 请求失败: ${response.status}`);
+    }
+    mcdata = await response.json();
+    try {
+     // 输出调试信息
+    const { icon, mods, ...debugData } = mcdata;
+    logger.info('原始数据:', JSON.stringify(debugData, null, 2));
+    } catch (e) {
+    logger.info('调试信息时出错:', e);
+    }
+    
+    const status: Status = mcdata as any;
+      
+    // 处理并生成 HTML 内容
+    let result = '';
+    let icon = '';
+    if (mcdata.online) {
+      result += `<p>${originalName}</p>`;
+      if (config.motd) {
+        result += `<p>${status.motd.html}</p>`;
+      }
+      result += `<p>IP: ${originalServer} </p>`;
+      result += `<p>版本: ${status.version}</p>`;
+      result += `<p>在线人数: ${status.players.online}/${status.players.max}</p>`;
+
+      if (status.players.list && status.players.list.length > 0) {
+        const playerNames = status.players.list.map(player => player.name).join(', ');
+        result += `<p>在线玩家: ${playerNames}</p>`;
+      } else {
+        result += `<p>在线玩家: 无法获取</p>`;
+      }
+    }else {
+      result += `<p>${originalName}</p>`;
+      result += `<p>IP: ${originalServer} </p>`;
+      result += '<p>查询失败，服务器离线或不存在</p>';
+    }
+    if (status.icon && status.icon.startsWith('data:image')) {
+      icon += status.icon;
+    }
+
+    return { icon, result };
+  } catch (error) {
+    logger.error('获取服务器状态时出错:', error);
+    return { icon: '', result: '获取服务器状态失败' };
+  }
+}
+
+
 export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
     .action(async ({ }, server) => {
-      
-      server = server || config.servers[0].ip;
-      const originalServer = server
-      
-      let serverAddress = server;
-      let mcdata: any;
       try {
-        // 使用 mcsrvstat.us API 替代
-        const apiUrl = `https://api.mcsrvstat.us/3/${encodeURIComponent(serverAddress)}`;
-        const response = await fetch(apiUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; MinecraftServerStatus/1.0)'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`API 请求失败: ${response.status}`);
-        }
-        mcdata = await response.json();
-        try {
-         // 输出调试信息
-        const { icon, mods, ...debugData } = mcdata;
-        logger.info('原始数据:', JSON.stringify(debugData, null, 2));
-        } catch (e) {
-        logger.info('调试信息时出错:', e);
-        }
-      const status: Status = mcdata as any;
-      
-      // 处理并生成 HTML 内容
-      let result = '';
-      let icon = '';
-      if (mcdata.online) {
-        if (config.motd) {
-          result += `<p>${status.motd.html}</p>`;
-        }
-        result += `<p>IP: ${originalServer} </p>`;
-        result += `<p>版本: ${status.version}</p>`;
-        result += `<p>在线人数: ${status.players.online}/${status.players.max}</p>`;
-
-        if (status.players.list && status.players.list.length > 0) {
-          const playerNames = status.players.list.map(player => player.name).join(', ');
-          result += `<p>在线玩家: ${playerNames}</p>`;
+        if (server){
+          let serverName = 'Minecraft Server';
+          let serverIP = server
+          let { icon, result } = await getserverstatus(serverName, serverIP, config);
+          const text = await bodyHtml(icon, result);
+          const footer = config.footer.replace(/\n/g, '</br>');
+          const html = await generateHtml(text, footer);
+          const image = await ctx.puppeteer.render(html);
+          return image;
         } else {
-          result += `<p>在线玩家: 无法获取</p>`;
+          let text = '';
+
+          for (const server of config.servers) {
+            const { icon, result } = await getserverstatus(server.name, server.ip, config);
+            text += await bodyHtml(icon, result);
+          }
+
+          const footer = config.footer.replace(/\n/g, '</br>');
+          const html = await generateHtml(text, footer);
+          const image = await ctx.puppeteer.render(html);
+          return image;
         }
-      }else {
-        result += `<p>IP: ${originalServer} </p>`;
-        result += '<p>查询失败，服务器离线或不存在</p>';
-      }
-      if (status.icon && status.icon.startsWith('data:image')) {
-        icon += status.icon;
-      }
-      const footer = config.footer.replace(/\n/g, '</br>');
-      const text = await bodyHtml(icon, result);
-      const html = await generateHtml(text, footer);
-      const image = await ctx.puppeteer.render(html);
-      return image;
-      } catch (e) {
-        logger.error('查询服务器状态失败:', e);
-        return '查询失败,遇到错误';
+      } catch (error) {
+        logger.error('获取服务器状态时出错:', error);
       }
     });
 }
