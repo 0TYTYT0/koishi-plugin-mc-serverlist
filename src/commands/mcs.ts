@@ -1,7 +1,6 @@
 import { Context } from "koishi";
 import { Config } from '../index';
 import { } from 'koishi-plugin-puppeteer'
-import url from 'node:url';
 import { Logger } from 'koishi';
 
 const logger = new Logger('mc-server');
@@ -16,7 +15,7 @@ interface Status {
 
 const dark = ["#2e3440", "#cdd6f4", "#434c5e"];
 
-export async function generateHtml(icon: any, text: string, footer) {
+export async function generateHtml(text: string, footer) {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -29,9 +28,24 @@ export async function generateHtml(icon: any, text: string, footer) {
       background-color: ${dark[0]};
       color: ${dark[1]};
     }
+    .server-icon {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+    }
   </style>
 </head>
 <body style="width: 750px">
+  ${text}
+  <footer class="bg-[${dark[2]}] text-center py-2">
+    <p class="text-sm text-[${dark[1]}]">${footer}</p>
+  </footer>
+</body>
+</html>`;
+}
+
+export async function bodyHtml(icon: string, text: string) {
+  return `
   <div class="container mx-auto pl-20 pr-8 py-4">
     <div class="px-6 flex items-center gap-10">
       ${
@@ -45,33 +59,14 @@ export async function generateHtml(icon: any, text: string, footer) {
         <div class="text-lg font-bold text-[${dark[1]}]">${text}</div>
       </div>
     </div>
-  </div>
-  <footer class="bg-[${dark[2]}] text-center py-2">
-    <p class="text-sm text-[${dark[1]}]">${footer}</p>
-  </footer>
-</body>
-</html>`;
+  </div>`;
 }
-
-function convertToPunycode(hostname: string): string {
-  try {
-    // Check if hostname contains non-ASCII characters
-    if (!/^[\x00-\x7F]*$/.test(hostname)) {
-      return url.domainToASCII(hostname)
-    }
-    return hostname;
-  } catch {
-    // If conversion fails, return original hostname
-    return hostname;
-  }
-}
-
 
 export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
-    .action(async ({ session }, server) => {
+    .action(async ({ }, server) => {
       
-      server = server || config.IP;
+      server = server || config.servers[0].ip;
       const originalServer = server
       
       let serverAddress = server;
@@ -123,7 +118,8 @@ export async function mcs(ctx: Context, config: Config) {
         icon += status.icon;
       }
       const footer = config.footer.replace(/\n/g, '</br>');
-      const html = await generateHtml(icon, result, footer);
+      const text = await bodyHtml(icon, result);
+      const html = await generateHtml(text, footer);
       const image = await ctx.puppeteer.render(html);
       return image;
       } catch (e) {
