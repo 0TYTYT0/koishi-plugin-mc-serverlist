@@ -62,7 +62,7 @@ export async function bodyHtml(icon: string, text: string) {
   </div>`;
 }
 
-export async function getserverstatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
+export async function getstatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
   let originalName = serverName;
   let originalServer = serverIP;
   let mcdata: any;
@@ -79,16 +79,18 @@ export async function getserverstatus(serverName: string, serverIP: string, conf
       throw new Error(`API 请求失败: ${response.status}`);
     }
     mcdata = await response.json();
-    try {
-     // 输出调试信息
-    const { icon, mods, ...debugData } = mcdata;
-    //logger.info('原始数据:', JSON.stringify(debugData, null, 2));
-    } catch (e) {
-    logger.info('调试信息时出错:', e);
-    }
     
-    const status: Status = mcdata as any;
-      
+    // 输出调试信息
+    if (config.debug) {
+      try {  
+        const { icon, mods, ...debugData } = mcdata;
+        logger.info('查询服务器:`${originalServer}`, `(${originalServer})');
+        logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
+      } catch (e) {
+        logger.info('调试信息时出错:', e);
+      }
+    }
+    const status = mcdata as any;
     // 处理并生成 HTML 内容
     let result = '';
     let icon = '';
@@ -134,7 +136,7 @@ export async function mcs(ctx: Context, config: Config) {
         if (server){
           let serverName = 'Minecraft Server';
           let serverIP = server
-          let { icon, result } = await getserverstatus(serverName, serverIP, config);
+          let { icon, result } = await getstatus(serverName, serverIP, config);
           const text = await bodyHtml(icon, result);
           const footer = config.footer.replace(/\n/g, '</br>');
           const html = await generateHtml(text, footer);
@@ -144,8 +146,8 @@ export async function mcs(ctx: Context, config: Config) {
           let text = '';
 
           for (const server of config.servers) {
-            const { icon, result } = await getserverstatus(server.name, server.ip, config);
-            text += await bodyHtml(icon, result);
+          const { icon, result } = await getstatus(server.name, server.ip, config);
+          text += await bodyHtml(icon, result);
           }
           
           const footer = config.footer.replace(/\n/g, '</br>');
@@ -153,8 +155,8 @@ export async function mcs(ctx: Context, config: Config) {
           const image = await ctx.puppeteer.render(html);
           return image;
         }
-      } catch (error) {
-        logger.error('获取服务器状态时出错:', error);
+      } catch (e) {
+        logger.error('获取服务器状态时出错:', e);
       }
     });
 }

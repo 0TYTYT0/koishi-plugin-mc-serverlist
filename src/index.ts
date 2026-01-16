@@ -17,6 +17,7 @@ export interface Config {
   showIP: boolean
   authority: number
   footer: string
+  debug: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -46,7 +47,10 @@ export const Config: Schema<Config> = Schema.object({
   footer: Schema.string()
     .role('textarea', { rows: [2, 4] })
     .default('')
-    .description('底部显示文字 (支持多行)')
+    .description('底部显示文字 (支持多行)'),
+  debug: Schema.boolean()
+    .default(false)
+    .description('输出调试日志'),
 })
 
 export const usage = `
