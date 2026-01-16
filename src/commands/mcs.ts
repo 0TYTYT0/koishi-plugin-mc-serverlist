@@ -54,6 +54,7 @@ export async function bodyHtml(icon: string, text: string, config: Config) {
   </div>`;
 }
 
+
 export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
   let originalName = serverName;
   let originalIP = serverIP;
