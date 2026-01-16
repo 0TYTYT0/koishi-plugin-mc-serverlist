@@ -82,7 +82,7 @@ export async function getserverstatus(serverName: string, serverIP: string, conf
     try {
      // 输出调试信息
     const { icon, mods, ...debugData } = mcdata;
-    logger.info('原始数据:', JSON.stringify(debugData, null, 2));
+    //logger.info('原始数据:', JSON.stringify(debugData, null, 2));
     } catch (e) {
     logger.info('调试信息时出错:', e);
     }
@@ -94,22 +94,25 @@ export async function getserverstatus(serverName: string, serverIP: string, conf
     let icon = '';
     if (mcdata.online) {
       result += `<p>${originalName}</p>`;
-      if (config.motd) {
+      if (config.showMotd) {
         result += `<p>${status.motd.html}</p>`;
       }
-      result += `<p>IP: ${originalServer} </p>`;
+      if (config.showIP){
+        result += `<p>IP: ${originalServer} </p>`;
+      }
       result += `<p>版本: ${status.version}</p>`;
-      result += `<p>在线人数: ${status.players.online}/${status.players.max}</p>`;
 
       if (status.players.list && status.players.list.length > 0) {
         const playerNames = status.players.list.map(player => player.name).join(', ');
-        result += `<p>在线玩家: ${playerNames}</p>`;
+        result += `<p>在线玩家(${status.players.online}/${status.players.max}): ${playerNames}</p>`;
       } else {
-        result += `<p>在线玩家: 无法获取</p>`;
+        result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无法获取</p>`;
       }
     }else {
       result += `<p>${originalName}</p>`;
-      result += `<p>IP: ${originalServer} </p>`;
+      if (config.showIP){
+        result += `<p>IP: ${originalServer} </p>`;
+      }
       result += '<p>查询失败，服务器离线或不存在</p>';
     }
     if (status.icon && status.icon.startsWith('data:image')) {
@@ -144,7 +147,7 @@ export async function mcs(ctx: Context, config: Config) {
             const { icon, result } = await getserverstatus(server.name, server.ip, config);
             text += await bodyHtml(icon, result);
           }
-
+          
           const footer = config.footer.replace(/\n/g, '</br>');
           const html = await generateHtml(text, footer);
           const image = await ctx.puppeteer.render(html);
