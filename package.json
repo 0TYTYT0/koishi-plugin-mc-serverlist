@@ -9,6 +9,10 @@
     "dist"
   ],
   "license": "MIT",
+  "repository": {                           
+    "type": "git",
+    "url": "git+https://github.com/0TYTYT0/koishi-plugin-mc-server"
+  },
   "keywords": [
     "chatbot",
     "koishi",
