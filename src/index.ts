@@ -16,6 +16,9 @@ export interface Config {
   showMotd: boolean
   showIP: boolean
   authority: number
+  color0: string
+  color1: string
+  color2: string
   footer: string
   debug: boolean
 }
@@ -44,6 +47,18 @@ export const Config: Schema<Config> = Schema.object({
   showIP: Schema.boolean()
     .default(true)
     .description('是否显示服务器地址'),
+  color0: Schema.string()
+    .role('color')
+    .default('#2e3440')
+    .description('图片背景颜色'),
+  color1: Schema.string()
+    .role('color')
+    .default('#cdd6f4')
+    .description('文字颜色'),
+  color2: Schema.string()
+    .role('color')
+    .default('#434c5e')
+    .description('底部文字背景颜色'),
   footer: Schema.string()
     .role('textarea', { rows: [2, 4] })
     .default('')
