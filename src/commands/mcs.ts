@@ -4,18 +4,9 @@ import { } from 'koishi-plugin-puppeteer'
 import { Logger } from 'koishi';
 
 const logger = new Logger('mc-server');
-interface Status {
-  motd: { html: string };
-  players: { max: number; online: number ;list: { name: string; id: string }[] };
-  version: string;
-  icon: string;
-  mods: { name: string; version: string };
-  online: boolean;
-}
 
-const dark = ["#2e3440", "#cdd6f4", "#434c5e"];
-
-export async function generateHtml(text: string, footer) {
+export async function generateHtml(text: string, footer, config: Config) {
+  const dark = [config.color0, config.color1, config.color2];
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -44,7 +35,8 @@ export async function generateHtml(text: string, footer) {
 </html>`;
 }
 
-export async function bodyHtml(icon: string, text: string) {
+export async function bodyHtml(icon: string, text: string, config: Config) {
+  const dark = [config.color0, config.color1, config.color2];
   return `
   <div class="container mx-auto pl-20 pr-8 py-4">
     <div class="px-6 flex items-center gap-10">
@@ -62,9 +54,9 @@ export async function bodyHtml(icon: string, text: string) {
   </div>`;
 }
 
-export async function getstatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
+export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
   let originalName = serverName;
-  let originalServer = serverIP;
+  let originalIP = serverIP;
   let mcdata: any;
   try {
     // 使用 mcsrvstat.us API 替代
@@ -82,10 +74,13 @@ export async function getstatus(serverName: string, serverIP: string, config: Co
     
     // 输出调试信息
     if (config.debug) {
-      try {  
+      try { 
         const { icon, mods, ...debugData } = mcdata;
-        logger.info('查询服务器:`${originalServer}`, `(${originalServer})');
+        logger.info('查询服务器:', `${originalName}`, `(${originalIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
+        if (mcdata.icon) {
+          logger.info('服务器图标存在');
+        }
       } catch (e) {
         logger.info('调试信息时出错:', e);
       }
@@ -100,7 +95,7 @@ export async function getstatus(serverName: string, serverIP: string, config: Co
         result += `<p>${status.motd.html}</p>`;
       }
       if (config.showIP){
-        result += `<p>IP: ${originalServer} </p>`;
+        result += `<p>IP: ${originalIP} </p>`;
       }
       result += `<p>版本: ${status.version}</p>`;
 
@@ -113,7 +108,7 @@ export async function getstatus(serverName: string, serverIP: string, config: Co
     }else {
       result += `<p>${originalName}</p>`;
       if (config.showIP){
-        result += `<p>IP: ${originalServer} </p>`;
+        result += `<p>IP: ${originalIP} </p>`;
       }
       result += '<p>查询失败，服务器离线或不存在</p>';
     }
@@ -128,7 +123,6 @@ export async function getstatus(serverName: string, serverIP: string, config: Co
   }
 }
 
-
 export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
     .action(async ({ }, server) => {
@@ -136,22 +130,22 @@ export async function mcs(ctx: Context, config: Config) {
         if (server){
           let serverName = 'Minecraft Server';
           let serverIP = server
-          let { icon, result } = await getstatus(serverName, serverIP, config);
-          const text = await bodyHtml(icon, result);
+          let { icon, result } = await getStatus(serverName, serverIP, config);
+          const text = await bodyHtml(icon, result, config);
           const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(text, footer);
+          const html = await generateHtml(text, footer, config);
           const image = await ctx.puppeteer.render(html);
           return image;
         } else {
           let text = '';
 
           for (const server of config.servers) {
-          const { icon, result } = await getstatus(server.name, server.ip, config);
-          text += await bodyHtml(icon, result);
+          const { icon, result } = await getStatus(server.name, server.ip, config);
+          text += await bodyHtml(icon, result, config);
           }
           
           const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(text, footer);
+          const html = await generateHtml(text, footer, config);
           const image = await ctx.puppeteer.render(html);
           return image;
         }
