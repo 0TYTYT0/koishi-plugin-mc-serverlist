@@ -7,3 +7,5 @@
 支持修改图片背景及文字颜色。
 
 由 [koishi-plugin-mc-server-status](https://github.com/Kokoro-js/koishi-plugin-mc-server-status) 插件修改实现。
+
+使用 mcsrvstat.us API

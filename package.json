@@ -14,12 +14,20 @@
     "type": "git",
     "url": "git+https://github.com/0TYTYT0/koishi-plugin-mc-server"
   },
+  "bugs": {
+    "url": "https://github.com/0TYTYT0/koishi-plugin-mc-server/issues"
+  },
   "keywords": [
     "chatbot",
     "koishi",
     "plugin",
     "minecraft"
   ],
+  "koishi": {
+    "description": {
+      "zh": "自用查询 Minecraft 服务器状态插件。支持查询多个服务器，并生成图片。"
+    }
+  },
   "peerDependencies": {
     "koishi": "^4.18.0",
     "koishi-plugin-puppeteer": "^3.9.0"
