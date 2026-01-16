@@ -13,9 +13,11 @@ export interface ServerItem {
 
 export interface Config {
   servers: ServerItem[]
-  motd: boolean
+  showMotd: boolean
+  showIP: boolean
   authority: number
   footer: string
+  debug: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -23,10 +25,10 @@ export const Config: Schema<Config> = Schema.object({
     Schema.object({
       name: Schema.string()
         .required(true)
-        .description('服务器名称 (用于指令参数标识)'),
+        .description('服务器名称'),
       ip: Schema.string()
         .required(true)
-        .description('服务器 IP 地址'),
+        .description('服务器地址'),
     })
   )
     .role('table')
@@ -36,17 +38,23 @@ export const Config: Schema<Config> = Schema.object({
     .number()
     .default(0)
     .description('默认指令权限等级 (mcs)'),
-  motd: Schema.boolean()
+  showMotd: Schema.boolean()
     .default(true)
     .description('是否显示服务器 MOTD'),
+  showIP: Schema.boolean()
+    .default(true)
+    .description('是否显示服务器地址'),
   footer: Schema.string()
     .role('textarea', { rows: [2, 4] })
     .default('')
-    .description('底部显示文字 (支持多行)')
+    .description('底部显示文字 (支持多行)'),
+  debug: Schema.boolean()
+    .default(false)
+    .description('输出调试日志'),
 })
 
 export const usage = `
-自用查询 Minecraft 服务器状态的插件。
+自用查询 Minecraft JAVA版服务器状态的插件。支持查询多个服务器, 并生成图片返回。
 `
 
 export function apply(ctx: Context, config: Config) {
