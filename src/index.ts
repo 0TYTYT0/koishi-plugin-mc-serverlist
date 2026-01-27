@@ -1,7 +1,7 @@
 import { Context, Schema } from 'koishi'
 import { mcs } from './commands/mcs'
 
-export const name = 'mc-server'
+export const name = 'mc-serverlist'
 export const inject = [
   'puppeteer'
 ]
@@ -35,7 +35,7 @@ export const Config: Schema<Config> = Schema.object({
     })
   )
     .role('table')
-    .default([{ name: 'default', ip: 'localhost' }])
+    .default([{ name: 'default', ip: 'localhost:25565' }])
     .description('服务器列表，支持多个服务器查询'),
   authority: Schema
     .number()
@@ -69,7 +69,8 @@ export const Config: Schema<Config> = Schema.object({
 })
 
 export const usage = `
-自用查询 Minecraft JAVA版服务器状态的插件。支持查询多个服务器, 并生成图片返回。
+查询Minecraft JAVA 版服务器状态的插件, 并生成图片。支持同时查询多个服务器。  
+使用mcsrvstat.us API。
 `
 
 export function apply(ctx: Context, config: Config) {
