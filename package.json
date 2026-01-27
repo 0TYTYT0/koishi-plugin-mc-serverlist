@@ -1,6 +1,6 @@
 {
-  "name": "@0tytyt0/koishi-plugin-mc-server",
-  "description": "自用查询 Minecraft 服务器状态插件。支持查询多个服务器，并生成图片。",
+  "name": "koishi-plugin-mc-serverlist",
+  "description": "查询Minecraft JAVA 版服务器状态的插件, 并生成图片。支持同时查询多个服务器。",
   "version": "1.0.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -9,13 +9,13 @@
     "dist"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/0TYTYT0/koishi-plugin-mc-server",
-  "repository": {                           
+  "homepage": "https://github.com/0TYTYT0/koishi-plugin-mc-serverlist",
+  "repository": {
     "type": "git",
-    "url": "git+https://github.com/0TYTYT0/koishi-plugin-mc-server"
+    "url": "git+https://github.com/0TYTYT0/koishi-plugin-mc-serverlist.git"
   },
   "bugs": {
-    "url": "https://github.com/0TYTYT0/koishi-plugin-mc-server/issues"
+    "url": "https://github.com/0TYTYT0/koishi-plugin-mc-serverlist/issues"
   },
   "keywords": [
     "chatbot",
@@ -25,7 +25,7 @@
   ],
   "koishi": {
     "description": {
-      "zh": "自用查询 Minecraft 服务器状态插件。支持查询多个服务器，并生成图片。"
+      "zh": "查询Minecraft JAVA 版服务器状态的插件, 并生成图片。支持同时查询多个服务器。"
     }
   },
   "peerDependencies": {
