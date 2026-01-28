@@ -99,11 +99,15 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
       }
       result += `<p>版本: ${status.version}</p>`;
 
-      if (status.players.list && status.players.list.length > 0) {
-        const playerNames = status.players.list.map(player => player.name).join(', ');
-        result += `<p>在线玩家(${status.players.online}/${status.players.max}): ${playerNames}</p>`;
+      if (status.players.online > 0) {
+        if (status.players.list && status.players.list.length > 0) {
+          const playerNames = status.players.list.map(player => player.name).join(', ');
+          result += `<p>在线玩家(${status.players.online}/${status.players.max}): ${playerNames}</p>`;
+        } else {
+          result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无法获取</p>`;
+        }
       } else {
-        result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无法获取</p>`;
+        result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无</p>`;
       }
     }else {
       result += `<p>${originalName}</p>`;
