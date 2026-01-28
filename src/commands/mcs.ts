@@ -20,13 +20,13 @@ export async function generateHtml(text: string, footer, config: Config) {
       color: ${dark[1]};
     }
     .server-icon {
-      width: 64px;
-      height: 64px;
+      width: 72px;
+      height: 72px;
       object-fit: contain;
     }
   </style>
 </head>
-<body style="width: 750px">
+<body style="width: 700px">
   ${text}
   <footer class="bg-[${dark[2]}] text-center py-2">
     <p class="text-sm text-[${dark[1]}]">${footer}</p>
@@ -38,7 +38,7 @@ export async function generateHtml(text: string, footer, config: Config) {
 export async function bodyHtml(icon: string, text: string, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
-  <div class="container mx-auto pl-20 pr-8 py-4">
+  <div class="container mx-auto pl-10 pr-8 py-4">
     <div class="px-6 flex items-center gap-10">
       ${
         icon
