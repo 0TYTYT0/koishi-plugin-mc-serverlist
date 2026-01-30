@@ -3,7 +3,8 @@ import { Config } from '../index';
 import { } from 'koishi-plugin-puppeteer'
 import { Logger } from 'koishi';
 
-const logger = new Logger('mc-server');
+
+const logger = new Logger('mc-server-list');
 
 export async function generateHtml(text: string, footer, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
@@ -34,7 +35,7 @@ export async function bodyHtml(serverIP: string, text: string, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
   <div class="py-4 px-6">
-    <!-- 关键：使用 grid 或 flex 分配空间 -->
+    <!-- 使用 grid 或 flex 分配空间 -->
     <div class="flex items-center" style="gap: 0;">
       <!-- 左侧固定空间，图标在其中居中 -->
       <div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
@@ -49,8 +50,7 @@ export async function bodyHtml(serverIP: string, text: string, config: Config) {
 }
 
 export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{result: string }> {
-  let originalName = serverName;
-  let originalIP = serverIP;
+  
   let mcdata: any;
   try {
     // 使用 mcsrvstat.us API 替代
@@ -70,7 +70,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     if (config.debug) {
       try { 
         const { icon, mods, ...debugData } = mcdata;
-        logger.info('查询服务器:', `${originalName}`, `(${originalIP})`);
+        logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
 
       } catch (e) {
@@ -80,11 +80,10 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     const status = mcdata as any;
     // 处理并生成 HTML 内容
     let result = '';
-    // let icon = '';
     if (mcdata.online) {
-      result += `<p>${originalName}`;
+      result += `<p>${serverName}`;
       if (config.showIP){
-        result += ` -- ${originalIP} </p>`;
+        result += ` -- ${serverIP} </p>`;
       }else {
         result += `</p>`;
       }
@@ -104,17 +103,14 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
         result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无人在线</p>`;
       }
     }else {
-      result += `<p>${originalName}</p>`;
+      result += `<p>${serverName}</p>`;
       if (config.showIP){
-        result += ` -- ${originalIP} </p>`;
+        result += ` -- ${serverIP} </p>`;
       }else {
         result += `</p>`;
       }
       result += '<p>查询失败，服务器离线或不存在</p>';
     }
-    // if (status.icon && status.icon.startsWith('data:image')) {
-    //   icon += status.icon;
-    // }
 
     return { result };
   } catch (error) {
@@ -125,12 +121,11 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
 
 export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
-    .action(async ({ }, server) => {
+    .action(async ({ }, serverIP) => {
       try {
-        if (server){
+        if (serverIP){
           // 指定服务器查询
           let serverName = 'Minecraft Server';
-          let serverIP = server
           let { result } = await getStatus(serverName, serverIP, config);
           const text = await bodyHtml(serverIP, result, config);
           const footer = config.footer.replace(/\n/g, '</br>');
