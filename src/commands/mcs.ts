@@ -3,7 +3,8 @@ import { Config } from '../index';
 import { } from 'koishi-plugin-puppeteer'
 import { Logger } from 'koishi';
 
-const logger = new Logger('mc-server');
+
+const logger = new Logger('mc-server-list');
 
 export async function generateHtml(text: string, footer, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
@@ -19,14 +20,9 @@ export async function generateHtml(text: string, footer, config: Config) {
       background-color: ${dark[0]};
       color: ${dark[1]};
     }
-    .server-icon {
-      width: 64px;
-      height: 64px;
-      object-fit: contain;
-    }
   </style>
 </head>
-<body style="width: 750px">
+<body style="width: 550px">
   ${text}
   <footer class="bg-[${dark[2]}] text-center py-2">
     <p class="text-sm text-[${dark[1]}]">${footer}</p>
@@ -35,28 +31,26 @@ export async function generateHtml(text: string, footer, config: Config) {
 </html>`;
 }
 
-export async function bodyHtml(icon: string, text: string, config: Config) {
+export async function bodyHtml( text: string, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
-  <div class="container mx-auto pl-20 pr-8 py-4">
-    <div class="px-6 flex items-center gap-10">
-      ${
-        icon
-          ? `<div class="flex-shrink-0">
-               <img src="${icon}" alt="server icon" class="server-icon rounded-lg" />
-             </div>`
-          : ""
-      }
-      <div class="flex-grow pl-25">
-        <div class="text-lg font-bold text-[${dark[1]}]">${text}</div>
+  <div class="py-4 px-6">
+    <!-- 使用 grid 或 flex 分配空间 -->
+    <div class="flex items-center" style="gap: 0;">
+      <!-- 左侧固定空间，图标在其中居中 -->
+      <div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
+        <img src="https://api.mcsrvstat.us/icon/hypixel.net" width="72" height="72" />
+      </div>
+      <!-- 文字区域占据剩余空间 -->
+      <div class="flex-grow" style="padding-left: 24px;">
+        <div class="text-lg font-bold text-[#cdd6f4]">${text}</div>
       </div>
     </div>
   </div>`;
 }
 
-export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{ icon: string; result: string }> {
-  let originalName = serverName;
-  let originalIP = serverIP;
+export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{result: string }> {
+
   let mcdata: any;
   try {
     // 使用 mcsrvstat.us API 替代
@@ -76,11 +70,9 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     if (config.debug) {
       try { 
         const { icon, mods, ...debugData } = mcdata;
-        logger.info('查询服务器:', `${originalName}`, `(${originalIP})`);
+        logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
-        if (mcdata.icon) {
-          logger.info('服务器图标存在');
-        }
+
       } catch (e) {
         logger.info('调试信息时出错:', e);
       }
@@ -88,65 +80,76 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     const status = mcdata as any;
     // 处理并生成 HTML 内容
     let result = '';
-    let icon = '';
     if (mcdata.online) {
-      result += `<p>${originalName}</p>`;
+      result += `<p>${serverName}`;
+      if (config.showIP){
+        result += ` -- ${serverIP} </p>`;
+      }else {
+        result += `</p>`;
+      }
       if (config.showMotd) {
         result += `<p>${status.motd.html}</p>`;
       }
-      if (config.showIP){
-        result += `<p>IP: ${originalIP} </p>`;
-      }
       result += `<p>版本: ${status.version}</p>`;
 
-      if (status.players.list && status.players.list.length > 0) {
-        const playerNames = status.players.list.map(player => player.name).join(', ');
-        result += `<p>在线玩家(${status.players.online}/${status.players.max}): ${playerNames}</p>`;
+      if (status.players.online > 0) {
+        if (status.players.list && status.players.list.length > 0) {
+          const playerNames = status.players.list.map(player => player.name).join(', ');
+          result += `<p>在线玩家(${status.players.online}/${status.players.max}): ${playerNames}</p>`;
+        } else {
+          result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无法获取</p>`;
+        }
       } else {
-        result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无法获取</p>`;
+        result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无人在线</p>`;
       }
     }else {
-      result += `<p>${originalName}</p>`;
+      result += `<p>${serverName}</p>`;
       if (config.showIP){
-        result += `<p>IP: ${originalIP} </p>`;
+        result += ` -- ${serverIP} </p>`;
+      }else {
+        result += `</p>`;
       }
       result += '<p>查询失败，服务器离线或不存在</p>';
     }
-    if (status.icon && status.icon.startsWith('data:image')) {
-      icon += status.icon;
-    }
 
-    return { icon, result };
+    return { result };
   } catch (error) {
     logger.error('获取服务器状态时出错:', error);
-    return { icon: '', result: '获取服务器状态失败' };
+    return {result: '获取服务器状态失败' };
   }
 }
 
 export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
-    .action(async ({ }, server) => {
+    .action(async ({ }, serverIP) => {
       try {
-        if (server){
+        if (serverIP){
+          // 指定服务器查询
           let serverName = 'Minecraft Server';
-          let serverIP = server
-          let { icon, result } = await getStatus(serverName, serverIP, config);
-          const text = await bodyHtml(icon, result, config);
+          let { result } = await getStatus(serverName, serverIP, config);
+          const body = await bodyHtml(result, config);
           const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(text, footer, config);
+          const html = await generateHtml(body, footer, config);
           const image = await ctx.puppeteer.render(html);
+          if (config.debug) {
+            logger.info('生成的 HTML:', html);
+          }
           return image;
         } else {
+          // 查询配置中的所有服务器
           let text = '';
 
           for (const server of config.servers) {
-          const { icon, result } = await getStatus(server.name, server.ip, config);
-          text += await bodyHtml(icon, result, config);
+          const { result } = await getStatus(server.name, server.ip, config);
+          text += await bodyHtml(result, config);
           }
           
           const footer = config.footer.replace(/\n/g, '</br>');
           const html = await generateHtml(text, footer, config);
           const image = await ctx.puppeteer.render(html);
+          if (config.debug) {
+            logger.info('生成的 HTML:', html);
+          }
           return image;
         }
       } catch (e) {
