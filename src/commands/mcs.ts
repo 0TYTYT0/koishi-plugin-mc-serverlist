@@ -31,7 +31,7 @@ export async function generateHtml(text: string, footer, config: Config) {
 </html>`;
 }
 
-export async function bodyHtml(serverIP: string, text: string, config: Config) {
+export async function bodyHtml( text: string, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
   <div class="py-4 px-6">
@@ -50,7 +50,7 @@ export async function bodyHtml(serverIP: string, text: string, config: Config) {
 }
 
 export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{result: string }> {
-  
+
   let mcdata: any;
   try {
     // 使用 mcsrvstat.us API 替代
@@ -127,9 +127,9 @@ export async function mcs(ctx: Context, config: Config) {
           // 指定服务器查询
           let serverName = 'Minecraft Server';
           let { result } = await getStatus(serverName, serverIP, config);
-          const text = await bodyHtml(serverIP, result, config);
+          const body = await bodyHtml(result, config);
           const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(text, footer, config);
+          const html = await generateHtml(body, footer, config);
           const image = await ctx.puppeteer.render(html);
           if (config.debug) {
             logger.info('生成的 HTML:', html);
@@ -141,7 +141,7 @@ export async function mcs(ctx: Context, config: Config) {
 
           for (const server of config.servers) {
           const { result } = await getStatus(server.name, server.ip, config);
-          text += await bodyHtml(server.ip, result, config);
+          text += await bodyHtml(result, config);
           }
           
           const footer = config.footer.replace(/\n/g, '</br>');
