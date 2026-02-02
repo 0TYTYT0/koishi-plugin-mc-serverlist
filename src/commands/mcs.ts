@@ -71,7 +71,6 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
         const { icon, mods, ...debugData } = mcdata;
         logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
-
       } catch (e) {
         logger.info('调试信息时出错:', e);
       }
@@ -114,7 +113,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     return { result , icon: status.icon || '' };
   } catch (error) {
     logger.error('获取服务器状态时出错:', error);
-    return {result: '获取服务器状态失败', icon: '' };
+    return { icon: '', result: '获取服务器状态失败' };
   }
 }
 
