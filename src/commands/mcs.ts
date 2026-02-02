@@ -37,9 +37,12 @@ export async function bodyHtml(icon:string, text: string, config: Config) {
     <!-- 使用 grid 或 flex 分配空间 -->
     <div class="flex items-center" style="gap: 0;">
       <!-- 左侧固定空间，图标在其中居中 -->
-      <div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
-        <img src="${icon}" width="72" height="72" />
-      </div>
+      ${icon
+        ? `<div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
+            <img src="${icon}" width="72" height="72" />
+          </div>`
+        : ""
+      }
       <!-- 文字区域占据剩余空间 -->
       <div class="flex-grow" style="padding-left: 24px;">
         <div class="text-lg font-bold text-[#cdd6f4]">${text}</div>
