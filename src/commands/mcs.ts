@@ -31,7 +31,7 @@ export async function generateHtml(text: string, footer, config: Config) {
 </html>`;
 }
 
-export async function bodyHtml( text: string, config: Config) {
+export async function bodyHtml(serverIP:string, text: string, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
   <div class="py-4 px-6">
@@ -39,7 +39,7 @@ export async function bodyHtml( text: string, config: Config) {
     <div class="flex items-center" style="gap: 0;">
       <!-- 左侧固定空间，图标在其中居中 -->
       <div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
-        <img src="https://api.mcsrvstat.us/icon/hypixel.net" width="72" height="72" />
+        <img src="https://api.mcsrvstat.us/icon/${serverIP}" width="72" height="72" />
       </div>
       <!-- 文字区域占据剩余空间 -->
       <div class="flex-grow" style="padding-left: 24px;">
@@ -83,7 +83,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     if (mcdata.online) {
       result += `<p>${serverName}`;
       if (config.showIP){
-        result += ` -- ${serverIP} </p>`;
+        result += ` ${serverIP} </p>`;
       }else {
         result += `</p>`;
       }
@@ -105,7 +105,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     }else {
       result += `<p>${serverName}</p>`;
       if (config.showIP){
-        result += ` -- ${serverIP} </p>`;
+        result += ` ${serverIP} </p>`;
       }else {
         result += `</p>`;
       }
@@ -127,7 +127,7 @@ export async function mcs(ctx: Context, config: Config) {
           // 指定服务器查询
           let serverName = 'Minecraft Server';
           let { result } = await getStatus(serverName, serverIP, config);
-          const body = await bodyHtml(result, config);
+          const body = await bodyHtml(serverIP, result, config);
           const footer = config.footer.replace(/\n/g, '</br>');
           const html = await generateHtml(body, footer, config);
           const image = await ctx.puppeteer.render(html);
@@ -141,7 +141,7 @@ export async function mcs(ctx: Context, config: Config) {
 
           for (const server of config.servers) {
           const { result } = await getStatus(server.name, server.ip, config);
-          text += await bodyHtml(result, config);
+          text += await bodyHtml(server.ip, result, config);
           }
           
           const footer = config.footer.replace(/\n/g, '</br>');
