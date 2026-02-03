@@ -70,6 +70,13 @@ export const Config: Schema<Config> = Schema.object({
 
 export const usage = `
 查询Minecraft JAVA 版服务器状态的插件, 并生成图片。支持同时查询多个服务器。  
+
+### 用法:  
+mcs [服务器地址]  
+例如:  
+mcs hypixel.net  
+如果不指定服务器地址, 则查询配置文件中的所有服务器。
+
 ~~使用 mcsrvstat.us API~~  
 v1.1.0 : 使用 TCP ping 协议直接查询服务器状态。
 `

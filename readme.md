@@ -7,5 +7,11 @@
 
 由 [koishi-plugin-mc-server-status](https://github.com/Kokoro-js/koishi-plugin-mc-server-status) 插件修改实现。
 
+### 用法:  
+``mcs [服务器地址]``  
+例如:  
+``mcs hypixel.net``  
+如果不指定服务器地址, 则查询配置文件中的所有服务器。
+
 ~~使用 mcsrvstat.us API~~  
 v1.1.0 : 使用 TCP ping 协议直接实现查询功能（Codex 大作）
