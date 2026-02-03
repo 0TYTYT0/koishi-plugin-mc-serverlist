@@ -321,7 +321,7 @@ async function resolveSrvPort(host: string) {
       return { host: record.name, port: record.port };
     }
   } catch {
-    // ignore SRV lookup errors
+    // 忽略解析错误
   }
   return { host, port: DEFAULT_PORT };
 }
@@ -329,7 +329,9 @@ async function resolveSrvPort(host: string) {
 export async function queryServerStatus(address: string): Promise<McStatusResponse> {
   const { host, port } = await parseServerAddress(address);
   return new Promise((resolve, reject) => {
+    // 建立 TCP 连接
     const socket = net.createConnection({ host, port });
+    // SocketReader 用于按协议读取 VarInt / String
     const reader = new SocketReader();
     let settled = false;
 
@@ -344,15 +346,18 @@ export async function queryServerStatus(address: string): Promise<McStatusRespon
       }
     };
 
+    // 超时处理
     socket.setTimeout(SOCKET_TIMEOUT_MS, () => {
       cleanup(new Error('连接超时'));
     });
 
     socket.on('error', (err) => cleanup(err));
+    // 收到数据后推入 reader 缓存
     socket.on('data', (data) => reader.push(data));
 
     socket.on('connect', async () => {
       try {
+        // 发送握手包：协议版本 + 地址 + 端口 + 下一个状态 (1)
         const handshakePayload = Buffer.concat([
           encodeVarInt(DEFAULT_PROTOCOL_VERSION),
           encodeString(host),
@@ -360,16 +365,20 @@ export async function queryServerStatus(address: string): Promise<McStatusRespon
           encodeVarInt(1),
         ]);
         socket.write(buildPacket(0x00, handshakePayload));
+        // 发送状态请求包（空负载）
         socket.write(buildPacket(0x00));
 
+        // 读取响应包：先读包长度，再读包体
         const length = await reader.readVarInt();
         const packet = await reader.readBytes(length);
         const packetReader = new SocketReader();
         packetReader.push(packet);
+        // 读取包 ID，状态响应应为 0x00
         const packetId = await packetReader.readVarInt();
         if (packetId !== 0x00) {
           throw new Error(`响应包 ID 异常: ${packetId}`);
         }
+        // 读取 JSON 字符串并解析为状态对象
         const json = await packetReader.readString();
         const parsed = JSON.parse(json) as McStatusResponse;
         if (!settled) {
