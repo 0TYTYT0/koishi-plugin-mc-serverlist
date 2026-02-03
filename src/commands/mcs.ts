@@ -1,7 +1,7 @@
-import { Context } from "koishi";
+import { Context, Logger } from "koishi";
 import { Config } from '../index';
-import { } from 'koishi-plugin-puppeteer'
-import { Logger } from 'koishi';
+import { } from 'koishi-plugin-puppeteer';
+import { formatMotdHtml, queryServerStatus } from './mcquery';
 
 const logger = new Logger('mc-server-list');
 
@@ -55,23 +55,11 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
 
   let mcdata: any;
   try {
-    // 使用 mcsrvstat.us API 替代
-    const apiUrl = `https://api.mcsrvstat.us/3/${encodeURIComponent(serverIP)}`;
-    const response = await fetch(apiUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MinecraftServerStatus/1.0)'
-     }
-    });
+    mcdata = await queryServerStatus(serverIP);
     
-    if (!response.ok) {
-      throw new Error(`API 请求失败: ${response.status}`);
-    }
-    mcdata = await response.json();
-    
-    // 输出调试信息
     if (config.debug) {
       try { 
-        const { icon, mods, ...debugData } = mcdata;
+        const { favicon, ...debugData } = mcdata;
         logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
       } catch (e) {
@@ -81,7 +69,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     const status = mcdata as any;
     // 处理并生成 HTML 内容
     let result = '';
-    if (mcdata.online) {
+    if (status) {
       result += `<p>${serverName}`;
       if (config.showIP){
         result += ` ${serverIP} </p>`;
@@ -89,34 +77,45 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
         result += `</p>`;
       }
       if (config.showMotd) {
-        result += `<p>${status.motd.html}</p>`;
+        result += `<p>${formatMotdHtml(status.description)}</p>`;
       }
-      result += `<p>版本: ${status.version}</p>`;
+      const versionName = status.version?.name || '未知';
+      result += `<p>版本: ${escapeHtml(versionName)}</p>`;
 
-      if (status.players.online > 0) {
-        if (status.players.list && status.players.list.length > 0) {
-          const playerNames = status.players.list.map(player => player.name).join(', ');
-          result += `<p>在线玩家(${status.players.online}/${status.players.max}): ${playerNames}</p>`;
+      const online = status.players?.online ?? 0;
+      const max = status.players?.max ?? 0;
+      if (online > 0) {
+        if (status.players?.sample && status.players.sample.length > 0) {
+          const playerNames = status.players.sample.map(player => player.name).join(', ');
+          result += `<p>在线玩家(${online}/${max}): ${escapeHtml(playerNames)}</p>`;
         } else {
-          result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无法获取</p>`;
+          result += `<p>在线玩家(${online}/${max}): 无法获取</p>`;
         }
       } else {
-        result += `<p>在线玩家(${status.players.online}/${status.players.max}): 无人在线</p>`;
+        result += `<p>在线玩家(${online}/${max}): 无人在线</p>`;
       }
     }else {
-      result += `<p>${serverName}</p>`;
+      result += `<p>${serverName}`;
       if (config.showIP){
         result += ` ${serverIP} </p>`;
       }else {
         result += `</p>`;
       }
-      result += '<p>查询失败，服务器离线或不存在</p>';
+      result += '<p>查询失败</p>';
     }
 
-    return { result , icon: status.icon || '' };
+    return { result , icon: status.favicon || '' };
   } catch (error) {
     logger.error('获取服务器状态时出错:', error);
-    return { icon: '', result: '获取服务器状态失败' };
+    let result = '';
+    result += `<p>${serverName}`;
+      if (config.showIP){
+        result += ` ${serverIP} </p>`;
+      }else {
+        result += `</p>`;
+      }
+      result += '<p>查询失败</p>';
+    return { icon: '', result };
   }
 }
 
@@ -157,4 +156,14 @@ export async function mcs(ctx: Context, config: Config) {
         logger.error('获取服务器状态时出错:', e);
       }
     });
+}
+
+// 转义 HTML 特殊字符
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
