@@ -146,8 +146,23 @@ function renderComponent(component: any, inherited: ChatStyle = {}) {
   };
 
   let html = '';
-  if (typeof component.text === 'string') {
-    html += wrapStyledText(component.text, style);
+  // 兼容 text/translate 字段作为基础文本
+  const baseText = typeof component.text === 'string'
+    ? component.text
+    : typeof component.translate === 'string'
+      ? component.translate
+      : '';
+  if (baseText) {
+    // 若包含 § 颜色码则解析为带样式的 HTML
+    html += baseText.includes('§')
+      ? renderLegacyToHtml(baseText)
+      : wrapStyledText(baseText, style);
+  }
+  // 兼容 translate 的 with 参数拼接
+  if (Array.isArray(component.with)) {
+    for (const part of component.with) {
+      html += renderComponent(part, style);
+    }
   }
   if (Array.isArray(component.extra)) {
     for (const child of component.extra) {
