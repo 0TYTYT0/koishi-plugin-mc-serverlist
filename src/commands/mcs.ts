@@ -52,58 +52,46 @@ export async function bodyHtml(icon:string, text: string, config: Config) {
 }
 
 export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{result: string, icon: string}> {
-
   let mcdata: any;
   try {
-    mcdata = await queryServerStatus(serverIP);
+    const status = await queryServerStatus(serverIP);
     
     if (config.debug) {
       try { 
-        const { favicon, modinfo, ...debugData } = mcdata;
+        const { favicon, modinfo, ...debugData } = status;
         logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
       } catch (e) {
         logger.info('调试信息时出错:', e);
       }
     }
-    const status = mcdata as any;
     // 处理并生成 HTML 内容
     let result = '';
-    if (status) {
-      result += `<p>${serverName}`;
-      if (config.showIP){
-        result += ` ${serverIP} </p>`;
-      }else {
-        result += `</p>`;
-      }
-      if (config.showMotd) {
-        result += `<p>${formatMotdHtml(status.description)}</p>`;
-      }
-      const versionName = status.version?.name || '未知';
-      result += `<p>版本: ${escapeHtml(versionName)}</p>`;
-
-      const online = status.players?.online ?? 0;
-      const max = status.players?.max ?? 0;
-      if (online > 0) {
-        if (status.players?.sample && status.players.sample.length > 0) {
-          const playerNames = status.players.sample.map(player => player.name).join(', ');
-          result += `<p>在线玩家(${online}/${max}): ${escapeHtml(playerNames)}</p>`;
-        } else {
-          result += `<p>在线玩家(${online}/${max}): 无法获取</p>`;
-        }
-      } else {
-        result += `<p>在线玩家(${online}/${max}): 无人在线</p>`;
-      }
+    result += `<p>${serverName}`;
+    if (config.showIP){
+      result += ` ${serverIP} </p>`;
     }else {
-      result += `<p>${serverName}`;
-      if (config.showIP){
-        result += ` ${serverIP} </p>`;
-      }else {
-        result += `</p>`;
-      }
-      result += '<p>查询失败</p>';
+      result += `</p>`;
     }
+    if (config.showMotd) {
+      result += `<p>${formatMotdHtml(status.description)}</p>`;
+    }
+    const versionName = status.version?.name || '未知';
+    result += `<p>版本: ${escapeHtml(versionName)}</p>`;
 
+    const online = status.players?.online ?? 0;
+    const max = status.players?.max ?? 0;
+    if (online > 0) {
+      if (status.players?.sample && status.players.sample.length > 0) {
+        const playerNames = status.players.sample.map(player => player.name).join(', ');
+        result += `<p>在线玩家(${online}/${max}): ${escapeHtml(playerNames)}</p>`;
+      } else {
+        result += `<p>在线玩家(${online}/${max}): 无法获取</p>`;
+      }
+    } else {
+      result += `<p>在线玩家(${online}/${max}): 无人在线</p>`;
+    }
+    
     return { result , icon: status.favicon || '' };
   } catch (error) {
     logger.error('获取服务器状态时出错:', error);

@@ -10,6 +10,7 @@ export type McStatusResponse = {
   players?: { online?: number; max?: number; sample?: { name: string; id?: string }[] };
   description?: string | { text?: string; extra?: any[]; color?: string; bold?: boolean; italic?: boolean; underlined?: boolean; strikethrough?: boolean; obfuscated?: boolean };
   favicon?: string;
+  modinfo?: { type: string; modList: { modid: string; version: string }[] };
 };
 
 const colorTable: Record<string, string> = {
