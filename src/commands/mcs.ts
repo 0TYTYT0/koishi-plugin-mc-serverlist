@@ -59,7 +59,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     
     if (config.debug) {
       try { 
-        const { favicon, ...debugData } = mcdata;
+        const { favicon, modinfo, ...debugData } = mcdata;
         logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
         logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
       } catch (e) {
