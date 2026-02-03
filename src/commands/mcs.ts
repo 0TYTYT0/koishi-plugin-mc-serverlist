@@ -56,7 +56,7 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
   let mcdata: any;
   try {
     // 使用 mcsrvstat.us API 替代
-    const apiUrl = `https://api.mcsrvstat.us/3/${encodeURIComponent(serverIP)}`;
+    const apiUrl = `https://${config.api}${encodeURIComponent(serverIP)}`;
     const response = await fetch(apiUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; MinecraftServerStatus/1.0)'

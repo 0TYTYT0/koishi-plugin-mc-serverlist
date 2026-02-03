@@ -21,6 +21,7 @@ export interface Config {
   color2: string
   footer: string
   debug: boolean
+  api: 'api.mcsrvstat.us/3/' | 'mcapi.us/server/status?ip='
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -37,6 +38,13 @@ export const Config: Schema<Config> = Schema.object({
     .role('table')
     .default([{ name: 'default', ip: 'localhost:25565' }])
     .description('服务器列表，支持多个服务器查询'),
+  
+    api: Schema.union([
+    Schema.const('api.mcsrvstat.us/3/'), 
+    Schema.const('mcapi.us/server/status?ip='),
+  ])
+    .default('api.mcsrvstat.us/3/')
+    .description('查询服务器状态使用的 API'),
   authority: Schema
     .number()
     .default(0)
