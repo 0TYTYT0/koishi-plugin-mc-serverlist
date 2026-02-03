@@ -7,4 +7,5 @@
 
 由 [koishi-plugin-mc-server-status](https://github.com/Kokoro-js/koishi-plugin-mc-server-status) 插件修改实现。
 
-使用 mcsrvstat.us API
+~~使用 mcsrvstat.us API~~  
+v1.1.0 : 使用 TCP ping 协议直接实现查询功能（Codex 大作）
