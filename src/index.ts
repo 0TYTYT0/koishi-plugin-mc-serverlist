@@ -79,6 +79,7 @@ mcs hypixel.net
 
 ~~使用 mcsrvstat.us API~~  
 v1.1.0 : 使用 TCP ping 协议直接查询服务器状态。
+v1.1.2 : 优化查询逻辑。
 `
 
 export function apply(ctx: Context, config: Config) {
