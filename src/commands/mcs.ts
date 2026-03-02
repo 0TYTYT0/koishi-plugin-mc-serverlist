@@ -52,7 +52,6 @@ export async function bodyHtml(icon:string, text: string, config: Config) {
 }
 
 export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{result: string, icon: string}> {
-  let mcdata: any;
   try {
     const status = await queryServerStatus(serverIP);
     
@@ -124,16 +123,19 @@ export async function mcs(ctx: Context, config: Config) {
           }
           return image;
         } else {
-          // 查询配置中的所有服务器
-          let text = '';
-
-          for (const server of config.servers) {
-          const { result, icon } = await getStatus(server.name, server.ip, config);
-          text += await bodyHtml(icon, result, config);
-          }
+          const allQueryResults = await Promise.all(
+            config.servers.map(async (server, index) => {
+              const { result, icon } = await getStatus(server.name, server.ip, config);
+              return { index, html: await bodyHtml(icon, result, config) };
+            })
+          );
+          const orderedHtml = allQueryResults
+            .sort((a, b) => a.index - b.index)
+            .map(b => b.html)
+            .join('');
           
           const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(text, footer, config);
+          const html = await generateHtml(orderedHtml, footer, config);
           const image = await ctx.puppeteer.render(html);
           if (config.debug) {
             logger.info('生成的 HTML:', html);
