@@ -1,5 +1,5 @@
 import { Context, Logger } from "koishi";
-import { Config } from '../index';
+import { indexConfig } from '../index';
 import { } from 'koishi-plugin-puppeteer';
 import { formatMotdHtml, queryServerStatus } from './mcquery';
 
@@ -17,7 +17,7 @@ function perfTimer(label: string) {
   };
 }
 
-export async function generateHtml(text: string, footer, config: Config) {
+export async function generateHtml(text: string, footer, config: indexConfig) {
   const dark = [config.color0, config.color1, config.color2];
   return `
 <!DOCTYPE html>
@@ -42,7 +42,7 @@ export async function generateHtml(text: string, footer, config: Config) {
 </html>`;
 }
 
-export async function bodyHtml(icon: string, text: string, config: Config) {
+export async function bodyHtml(icon: string, text: string, config: indexConfig) {
   const dark = [config.color0, config.color1, config.color2];
   return `
   <div class="py-4 px-6">
@@ -63,7 +63,7 @@ export async function bodyHtml(icon: string, text: string, config: Config) {
   </div>`;
 }
 
-export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{ result: string, icon: string }> {
+export async function getStatus(serverName: string, serverIP: string, config: indexConfig): Promise<{ result: string, icon: string }> {
   const timer = perfTimer(`查询服务器 ${serverName} (${serverIP}) 总耗时`);
   try {
     const queryTimer = perfTimer(`网络请求 ${serverIP}`);
@@ -127,53 +127,38 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
   }
 }
 
-export async function mcs(ctx: Context, config: Config) {
+export async function mcs(ctx: Context, config: indexConfig) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
     .action(async ({ }, serverIP) => {
       const cmdTimer = perfTimer('mcs 命令总耗时');
       try {
-        if (serverIP) {
-          // 指定服务器查询
-          logger.info(`[开始] 单服务器查询: ${serverIP}`);
-          let serverName = 'Minecraft Server';
-          let { result, icon } = await getStatus(serverName, serverIP, config);
-          
-          const renderTimer = perfTimer('HTML 生成与渲染');
-          const body = await bodyHtml(icon, result, config);
-          const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(body, footer, config);
-          renderTimer.end();
-          
-          const image = await ctx.puppeteer.render(html);
+        // 单服查询转为单元素数组，复用批量查询逻辑
+        const servers = serverIP
+          ? [{ name: 'Minecraft Server', ip: serverIP }]
+          : config.servers;
 
-          cmdTimer.end();
-          return image;
-        } else {
-          const serverCount = config.servers.length;
-          logger.info(`[开始] 批量查询 ${serverCount} 个服务器`);
-          
-          const batchTimer = perfTimer('批量服务器查询');
-          const allQueryResults = await Promise.all(
-            config.servers.map(async (server, index) => {
-              const { result, icon } = await getStatus(server.name, server.ip, config);
-              return { index, html: await bodyHtml(icon, result, config) };
-            })
-          );
-          batchTimer.end();
+        logger.debug(`[开始] 查询 ${servers.length} 个服务器`);
 
-          const renderTimer = perfTimer('HTML 生成与渲染');
-          const orderedHtml = allQueryResults
-            .sort((a, b) => a.index - b.index)
-            .map(b => b.html)
-            .join('');
-          const footer = config.footer.replace(/\n/g, '</br>');
-          const html = await generateHtml(orderedHtml, footer, config);
-          const image = await ctx.puppeteer.render(html);
-          renderTimer.end();
+        const batchTimer = perfTimer('批量服务器查询');
+        const results = await Promise.all(
+          servers.map(async (server, index) => {
+            const { result, icon } = await getStatus(server.name, server.ip, config);
+            return { index, html: await bodyHtml(icon, result, config) };
+          })
+        );
+        batchTimer.end();
 
-          cmdTimer.end();
-          return image;
-        }
+        const renderTimer = perfTimer('HTML 生成与渲染');
+        const html = await generateHtml(
+          results.sort((a, b) => a.index - b.index).map(r => r.html).join(''),
+          config.footer.replace(/\n/g, '</br>'),
+          config
+        );
+        const image = await ctx.puppeteer.render(html);
+        renderTimer.end();
+
+        cmdTimer.end();
+        return image;
       } catch (e) {
         cmdTimer.end();
         const errorMsg = e instanceof Error ? e.message : String(e);

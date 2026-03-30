@@ -11,7 +11,7 @@ export interface ServerItem {
   ip: string
 }
 
-export interface Config {
+export interface indexConfig {
   servers: ServerItem[]
   showMotd: boolean
   showIP: boolean
@@ -23,7 +23,7 @@ export interface Config {
   debug: boolean
 }
 
-export const Config: Schema<Config> = Schema.object({
+export const Config: Schema<indexConfig> = Schema.object({
   servers: Schema.array(
     Schema.object({
       name: Schema.string()
@@ -79,9 +79,10 @@ mcs hypixel.net
 
 ~~使用 mcsrvstat.us API~~  
 v1.1.0 : 使用 TCP ping 协议直接查询服务器状态。  
-v1.1.2 : 优化查询逻辑。
+v1.1.2 : 优化查询逻辑。  
+v1.1.3 : 添加性能计时工具，提升代码复用性。
 `
 
-export function apply(ctx: Context, config: Config) {
+export function apply(ctx: Context, config: indexConfig) {
   mcs(ctx, config)
 }
