@@ -5,6 +5,18 @@ import { formatMotdHtml, queryServerStatus } from './mcquery';
 
 const logger = new Logger('mc-server-list');
 
+// 性能计时工具
+function perfTimer(label: string) {
+  const start = performance.now();
+  return {
+    end: () => {
+      const elapsed = performance.now() - start;
+      logger.info(`[计时] ${label}: ${elapsed.toFixed(2)}ms`);
+      return elapsed;
+    }
+  };
+}
+
 export async function generateHtml(text: string, footer, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
@@ -30,7 +42,7 @@ export async function generateHtml(text: string, footer, config: Config) {
 </html>`;
 }
 
-export async function bodyHtml(icon:string, text: string, config: Config) {
+export async function bodyHtml(icon: string, text: string, config: Config) {
   const dark = [config.color0, config.color1, config.color2];
   return `
   <div class="py-4 px-6">
@@ -38,11 +50,11 @@ export async function bodyHtml(icon:string, text: string, config: Config) {
     <div class="flex items-center" style="gap: 0;">
       <!-- 左侧固定空间，图标在其中居中 -->
       ${icon
-        ? `<div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
+      ? `<div style="width: 96px; display: flex; justify-content: center; flex-shrink: 0;">
             <img src="${icon}" width="72" height="72" />
           </div>`
-        : ""
-      }
+      : ""
+    }
       <!-- 文字区域占据剩余空间 -->
       <div class="flex-grow" style="padding-left: 24px;">
         <div class="text-lg font-bold text-[#cdd6f4]">${text}</div>
@@ -51,25 +63,30 @@ export async function bodyHtml(icon:string, text: string, config: Config) {
   </div>`;
 }
 
-export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{result: string, icon: string}> {
+export async function getStatus(serverName: string, serverIP: string, config: Config): Promise<{ result: string, icon: string }> {
+  const timer = perfTimer(`查询服务器 ${serverName} (${serverIP}) 总耗时`);
   try {
+    const queryTimer = perfTimer(`网络请求 ${serverIP}`);
     const status = await queryServerStatus(serverIP);
-    
+    queryTimer.end();
+
+    // 仅在 debug 模式下输出精简数据
     if (config.debug) {
-      try { 
+      try {
+        // 限制输出内容，避免大对象日志
         const { favicon, modinfo, ...debugData } = status;
-        logger.info('查询服务器:', `${serverName}`, `(${serverIP})`);
-        logger.info('精简返回数据:', JSON.stringify(debugData, null, 2));
+        const jsonStr = JSON.stringify(debugData);
+        logger.info(`[数据] ${jsonStr.length > 500 ? jsonStr.slice(0, 500) + '... (已截断)' : jsonStr}`);
       } catch (e) {
-        logger.info('调试信息时出错:', e);
+        logger.info('[调试] 序列化调试数据失败:', e);
       }
     }
     // 处理并生成 HTML 内容
     let result = '';
     result += `<p>${serverName}`;
-    if (config.showIP){
+    if (config.showIP) {
       result += ` ${serverIP} </p>`;
-    }else {
+    } else {
       result += `</p>`;
     }
     if (config.showMotd) {
@@ -90,18 +107,22 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
     } else {
       result += `<p>在线玩家(${online}/${max}): 无人在线</p>`;
     }
-    
-    return { result , icon: status.favicon || '' };
+
+    timer.end();
+    return { result, icon: status.favicon || '' };
   } catch (error) {
-    logger.error('获取服务器状态时出错:', error);
+    timer.end();
+    // 精简错误日志，避免输出整个错误对象
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error(`[查询失败] ${serverName} (${serverIP}): ${errorMsg}`);
     let result = '';
     result += `<p>${serverName}`;
-      if (config.showIP){
-        result += ` ${serverIP} </p>`;
-      }else {
-        result += `</p>`;
-      }
-      result += '<p>查询失败</p>';
+    if (config.showIP) {
+      result += ` ${serverIP} </p>`;
+    } else {
+      result += `</p>`;
+    }
+    result += '<p>查询失败</p>';
     return { icon: '', result };
   }
 }
@@ -109,41 +130,54 @@ export async function getStatus(serverName: string, serverIP: string, config: Co
 export async function mcs(ctx: Context, config: Config) {
   ctx.command('mcs [server]', '查询 Minecraft 服务器状态', { authority: config.authority })
     .action(async ({ }, serverIP) => {
+      const cmdTimer = perfTimer('mcs 命令总耗时');
       try {
-        if (serverIP){
+        if (serverIP) {
           // 指定服务器查询
+          logger.info(`[开始] 单服务器查询: ${serverIP}`);
           let serverName = 'Minecraft Server';
           let { result, icon } = await getStatus(serverName, serverIP, config);
+          
+          const renderTimer = perfTimer('HTML 生成与渲染');
           const body = await bodyHtml(icon, result, config);
           const footer = config.footer.replace(/\n/g, '</br>');
           const html = await generateHtml(body, footer, config);
+          renderTimer.end();
+          
           const image = await ctx.puppeteer.render(html);
-          if (config.debug) {
-            logger.info('生成的 HTML:', html);
-          }
+
+          cmdTimer.end();
           return image;
         } else {
+          const serverCount = config.servers.length;
+          logger.info(`[开始] 批量查询 ${serverCount} 个服务器`);
+          
+          const batchTimer = perfTimer('批量服务器查询');
           const allQueryResults = await Promise.all(
             config.servers.map(async (server, index) => {
               const { result, icon } = await getStatus(server.name, server.ip, config);
               return { index, html: await bodyHtml(icon, result, config) };
             })
           );
+          batchTimer.end();
+
+          const renderTimer = perfTimer('HTML 生成与渲染');
           const orderedHtml = allQueryResults
             .sort((a, b) => a.index - b.index)
             .map(b => b.html)
             .join('');
-          
           const footer = config.footer.replace(/\n/g, '</br>');
           const html = await generateHtml(orderedHtml, footer, config);
           const image = await ctx.puppeteer.render(html);
-          if (config.debug) {
-            logger.info('生成的 HTML:', html);
-          }
+          renderTimer.end();
+
+          cmdTimer.end();
           return image;
         }
       } catch (e) {
-        logger.error('获取服务器状态时出错:', e);
+        cmdTimer.end();
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        logger.error(`[命令失败] ${errorMsg}`);
       }
     });
 }
