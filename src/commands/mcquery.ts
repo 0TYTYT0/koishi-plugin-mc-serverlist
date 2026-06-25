@@ -11,6 +11,7 @@ export type McStatusResponse = {
   description?: string | { text?: string; extra?: any[]; color?: string; bold?: boolean; italic?: boolean; underlined?: boolean; strikethrough?: boolean; obfuscated?: boolean };
   favicon?: string;
   modinfo?: { type: string; modList: { modid: string; version: string }[] };
+  forgeData?: { d?: string; };
 };
 
 const colorTable: Record<string, string> = {

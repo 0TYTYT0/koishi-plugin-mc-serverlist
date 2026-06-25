@@ -17,7 +17,7 @@ function perfTimer(label: string) {
   };
 }
 
-export async function generateHtml(text: string, footer, config: indexConfig) {
+export async function generateHtml(text: string, footer: string, config: indexConfig) {
   const dark = [config.color0, config.color1, config.color2];
   return `
 <!DOCTYPE html>
@@ -64,34 +64,25 @@ export async function bodyHtml(icon: string, text: string, config: indexConfig) 
 }
 
 export async function getStatus(serverName: string, serverIP: string, config: indexConfig): Promise<{ result: string, icon: string }> {
-  const timer = perfTimer(`查询服务器 ${serverName} (${serverIP}) 总耗时`);
+  const timer = perfTimer(`查询服务器 ${serverName} (${serverIP}) 耗时`);
   try {
-    const queryTimer = perfTimer(`网络请求 ${serverIP}`);
     const status = await queryServerStatus(serverIP);
-    queryTimer.end();
 
     // 仅在 debug 模式下输出精简数据
     if (config.debug) {
       try {
         // 限制输出内容，避免大对象日志
-        const { favicon, modinfo, ...debugData } = status;
+        const { favicon, modinfo, forgeData, ...debugData } = status;
         const jsonStr = JSON.stringify(debugData);
-        logger.info(`[数据] ${jsonStr.length > 500 ? jsonStr.slice(0, 500) + '... (已截断)' : jsonStr}`);
+        logger.info(`[数据(${serverName})] ${jsonStr.length > 500 ? jsonStr.slice(0, 500) + '... (已截断)' : jsonStr}`);
       } catch (e) {
         logger.info('[调试] 序列化调试数据失败:', e);
       }
     }
     // 处理并生成 HTML 内容
     let result = '';
-    result += `<p>${serverName}`;
-    if (config.showIP) {
-      result += ` ${serverIP} </p>`;
-    } else {
-      result += `</p>`;
-    }
-    if (config.showMotd) {
-      result += `<p>${formatMotdHtml(status.description)}</p>`;
-    }
+    result += `<p>${serverName}` + (config.showIP ? ` ${serverIP} ` : '') + `</p>`;
+    result += config.showMotd ? `<p>${formatMotdHtml(status.description)}</p>` : '';
     const versionName = status.version?.name || '未知';
     result += `<p>版本: ${escapeHtml(versionName)}</p>`;
 
@@ -116,12 +107,7 @@ export async function getStatus(serverName: string, serverIP: string, config: in
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error(`[查询失败] ${serverName} (${serverIP}): ${errorMsg}`);
     let result = '';
-    result += `<p>${serverName}`;
-    if (config.showIP) {
-      result += ` ${serverIP} </p>`;
-    } else {
-      result += `</p>`;
-    }
+    result += `<p>${serverName}` + (config.showIP ? ` ${serverIP} ` : '') + `</p>`;
     result += '<p>查询失败</p>';
     return { icon: '', result };
   }
@@ -163,6 +149,7 @@ export async function mcs(ctx: Context, config: indexConfig) {
         cmdTimer.end();
         const errorMsg = e instanceof Error ? e.message : String(e);
         logger.error(`[命令失败] ${errorMsg}`);
+        return '出现错误';
       }
     });
 }
